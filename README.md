@@ -202,4 +202,33 @@ this example.)
  
  - Macro `wbtree:do` `(`_bindings_ _object_ `&rest` _options_ `)` `&body` _body_
  
- 
+## Example
+
+```common-lisp
+(wbtree:define command-map
+  (:comparator (lambda (c1 c2) (signum (- (char-code c1) (char-code c2)))))
+  (:constructor make-command-map)
+  (:constructor* command-map)
+  (:predicate command-map-p))
+
+(defvar *global-commands* (command-map #\p 'print-report
+                                       #\s 'save-data
+                                       #\o 'load-data
+                                       #\q 'quit-application
+                                       #\space 'ignore
+                                       #\newline 'ignore
+                                       #\return 'ignore))
+(defun main ()
+  (loop
+    for key = (progn (format *query-io* "~&> ") (force-output *query-io*) (read-char *query-io*))
+    as command = (wbtree:find key *global-commands* 'beep-angrily)
+    do (ecase command
+         ((ignore))
+         ((print-report) (print '(pretend me printing)))
+         ((load-data) (print '(pretend me loading)))
+         ((save-data) (print '(pretend me saving)))
+         ((quit-application) (return))
+         ((beep-angrily) (print '(pretend me beeping furiously))))))
+```
+
+(this is stupid...)
