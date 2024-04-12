@@ -32,4 +32,4 @@
 (defpackage #:deterministic-arts.wbtree.internals
   (:use #:common-lisp)
   (:local-nicknames (#:api #:deterministic-arts.wbtree))
-  (:export #:check-invariants))
+  (:export #:check-invariants #:compare-strings))

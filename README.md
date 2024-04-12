@@ -189,7 +189,7 @@ this example.)
     - otherwise, _change_ is the `wbtree:node` from instance from _object_, that has been 
       replaced by an updated version in _new-object_
       
-  The default _test_ predicate is `eql`
+   The default _test_ predicate is `eql`
 
  - Function `wbtree:value` _node_ &rarr; _value_
  

@@ -651,6 +651,16 @@
         (signum (- (char-code (char string1 difference))
                    (char-code (char string2 (+ start2 (- difference start1)))))))))
 
+(defun compare-strings (string1 string2)
+  (let* ((len1 (length string1))
+         (len2 (length string2))
+         (clen (min len1 len2))
+         (difference (mismatch string1 string2 :end1 clen :end2 clen)))
+    (if (not difference)
+        (signum (- len1 len2))
+        (signum (- (char-code (char string1 difference))
+                   (char-code (char string2 difference)))))))
+
 (define-setf-expander api:find (key-form place &optional (default nil have-default)
                                 &environment env)
   (multiple-value-bind (vars vals newval setter getter) (get-setf-expansion place env)
