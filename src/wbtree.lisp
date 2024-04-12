@@ -63,28 +63,24 @@
              ,@(unless (string= "_" right) (list `(,right (api:right ,node-var)))))
          ,@body))))
 
-(defmacro if-let-aux ((&rest bindings) then else)
-  (if (null bindings)
-      then
-      (let ((first (car bindings)))
-        `(let (,first)
-           (if ,(first first)
-               (if-let-aux (,@(cdr bindings)) ,then ,else)
-               ,else)))))
-
-(defmacro if-let* ((&rest bindings) then else)
+(defmacro when-let* ((&rest bindings) &body body)
   (cond
-    ((null bindings) else)
-    ((null (cdr bindings))
-     `(let ,bindings
-        (if ,(caar bindings) ,then ,else)))
-    (t (let ((else-label (gensym))
-             (block-name (gensym)))
-         `(block ,block-name
-            (tagbody
-               (return-from ,block-name (if-let-aux (,@bindings) ,then ,else))
-               ,else-label
-               (return-from ,block-name ,else)))))))
+    ((null bindings) `(progn ,@body))
+    ((null (cdr bindings)) `(let ,bindings (when ,(caar bindings) ,@body)))
+    (t `(let (,(car bindings))
+          (when ,(caar bindings)
+            (when-let* (,@(cdr bindings))
+              ,@body))))))
+
+(defmacro if-let* ((&rest bindings) &body (then else))
+  (cond
+    ((null bindings) then)
+    ((null (cdr bindings)) `(let (,(car bindings)) (if ,(caar bindings) ,then ,else)))
+    (t (let ((region (gensym)))
+         `(block ,region
+            (when-let* (,@bindings)
+              (return-from ,region ,then))
+            ,else)))))
 
 (defmacro named-let (name (&rest bindings) &body body)
   (let* ((repeat (gensym))
@@ -777,4 +773,3 @@
             ,@body
             (go ,restart)
             ,done)))))
-

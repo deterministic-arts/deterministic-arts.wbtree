@@ -238,7 +238,7 @@ this example.)
       If `nil` no constructor function is generated (but see `:constructor*` below).
       If `t` the name for the function will be derived from the tree type name by
       prepending `make-`. The symbol will be interned in the current package in this
-      case.
+      case. Any other symbol is used as is.
       
       _name_ is not evaluated.
       
@@ -250,10 +250,10 @@ this example.)
       argument. As with `:constructor` the arguments are expected to be "plist"-style
       key/value pairs.
       
-      If `nil` no constructor function is generated (but see `:constructor*` below).
+      If `nil` no constructor function is generated (but see `:constructor` above).
       If `t` the name for the function will be derived from the tree type name by
       prepending `make-` and appending `*`. The symbol will be interned in the current 
-      package in this case.
+      package in this case. Any other symbol is used as is.
       
       The default value is `nil` (i.e., no spread constructor will be generated.)
       
