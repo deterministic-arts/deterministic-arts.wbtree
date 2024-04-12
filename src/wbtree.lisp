@@ -172,7 +172,7 @@
     
 (defun api:find (key object &optional default)
   (if-let* ((node (api:find-node key object)))
-    (values (api:value object) t)
+    (values (api:value node) t)
     (values default nil)))
 
 
