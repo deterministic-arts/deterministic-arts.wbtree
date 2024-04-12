@@ -1,3 +1,25 @@
+#|                                           -*- mode: lisp; coding: utf-8 -*-
+  Deterministic Arts -- WB Tree
+  Copyright (c) 2024 Dirk Esser
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+|#
 
 (in-package #:deterministic-arts.wbtree.internals)
 
@@ -746,27 +768,3 @@
             (go ,restart)
             ,done)))))
 
-    
-
-    
-#-(and)
-(api:define inttree
-  (:comparator (lambda (x y) (signum (- x y))))
-  (:constructor make-inttree)
-  (:predicate inttreep))
-
-#-(and)
-(let ((tree1 (make-inttree (list 1 "one" 3 "three-left" 5 "five")))
-      (tree2 (make-inttree (list 3 "three-right" 2 "two" 4 "four" 6 "six"))))
-  (print tree1)
-  (print tree2)
-  (print (api:union tree1 tree2))
-  (print (make-load-form tree1)))
-
-#-(and)
-(let* ((tree (make-inttree (list 1 "one" 3 "three-left" 5 "five" 7 "seven")))
-       (iter (api:node-iterator tree :from-end t :above 8)))
-  (named-let next ((head (funcall iter)))
-    (when head
-      (print (api:key head))
-      (next (funcall iter)))))
