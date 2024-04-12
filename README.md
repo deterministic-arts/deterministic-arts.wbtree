@@ -199,7 +199,72 @@ this example.)
 ## Macros
 
  - Macro `wbtree:define` _name_ `&body` _description_ 
- 
+
+   Defines a new concrete search tree type. The _description_ forms in the body
+   have the general format
+   
+   ```common-lisp
+   (key form1 ...)
+   ```
+   
+   and define the essential properties of the new search tree type. The following 
+   options are defined:
+   
+    - `:predicate` _name_ 
+    
+      Supplies the name of the type predicate for the search tree type itself. 
+      If _name_ is `nil` then no predicate is defined. If _name_ is `t`, a default
+      name is generated. The symbol will be interned in the current package. The
+      name is derived from the tree name by appending either `-p` or `p` depending
+      on whether the type name already contains hyphens or not. Any other symbol
+      is used as is.
+      
+      _name_ is not evaluated.
+      
+    - `:comparator` _function_
+   
+      Names the comparator function to be used. The _function_ must be something
+      suitable for having `function` wrapped around it (i.e., either a symbol naming
+      a function or a lambda expression.) This option is required.
+     
+      _function_ is not evaluated.
+     
+    - `:constructor` _name_
+    
+      Supplies a name for the constructor function with which new instances of this
+      search type can be constructed. The generated function takes a single optional
+      argument, a plist-style list of key/value pairs.
+      
+      If `nil` no constructor function is generated (but see `:constructor*` below).
+      If `t` the name for the function will be derived from the tree type name by
+      prepending `make-`. The symbol will be interned in the current package in this
+      case.
+      
+      _name_ is not evaluated.
+      
+    - `:constructor*` _name_
+    
+      Supplies a name for the alternative "spread" constructor function with which 
+      new instances of this search type can be constructed. This one differs from the
+      regular constructor in that it takes an arbitrary number of parameters via `&rest` 
+      argument. As with `:constructor` the arguments are expected to be "plist"-style
+      key/value pairs.
+      
+      If `nil` no constructor function is generated (but see `:constructor*` below).
+      If `t` the name for the function will be derived from the tree type name by
+      prepending `make-` and appending `*`. The symbol will be interned in the current 
+      package in this case.
+      
+      The default value is `nil` (i.e., no spread constructor will be generated.)
+      
+      _name_ is not evaluated.
+      
+    - `:documentation` _string_
+    
+      Provides a documentation string for the new search tree type. This option is
+      currently ignored when present. Future versions might provide access to the
+      documentation string via `cl:documentation`.
+
  - Macro `wbtree:do` `(`_bindings_ _object_ `&rest` _options_ `)` `&body` _body_
  
 ## Example
