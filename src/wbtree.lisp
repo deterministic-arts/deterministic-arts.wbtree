@@ -282,7 +282,7 @@
   (declare (ignore key left))
   right)
 
-(defun api:union (object1 object2 &key (combiner #'pick-right) (test #'eql))
+(defun api:union (object1 object2 &key (combiner #'pick-right))
   (with-configuration object1
     (labels
         ((insert (key value node)
@@ -297,8 +297,9 @@
                      ((plusp order)
                       (let ((new-right (insert key value right)))
                         (if (eq right new-right) node (rebalance make-node nkey nvalue left new-right))))
-                     ((funcall test value nvalue) node)
-                     (t (make-node key value left right)))))))
+                     (t (error "should not happen"))
+                     #-(and) ((funcall test value nvalue) node)
+                     #-(and) (t (make-node key value left right)))))))
          (concat-3 (key value left right) 
            (cond
              ((api:emptyp left) (insert key value right))
@@ -341,7 +342,7 @@
                                 (union* r* r)))))))))
       (union* object1 object2))))
 
-(defun api:intersection (object1 object2 &key (combiner #'pick-right) (test #'eql))
+(defun api:intersection (object1 object2 &key (combiner #'pick-right))
   (with-configuration object1
     (labels ((memberp (key value tree)
                (if (api:emptyp tree)
@@ -364,8 +365,9 @@
                          ((plusp order)
                           (let ((new-right (insert key value right)))
                             (if (eq right new-right) node (rebalance make-node nkey nvalue left new-right))))
-                         ((funcall test value nvalue) node)
-                         (t (make-node key value left right)))))))
+                         (t (error "should not happen"))
+                         #-(and) ((funcall test value nvalue) node)
+                         #-(and) (t (make-node key value left right)))))))
              (concat (tree1 tree2)
                (cond
                  ((api:emptyp tree1) tree2)
@@ -418,7 +420,7 @@
                               (concat (intersect* l* l) (intersect* r* r))))))))))
       (intersect* object1 object2))))
 
-(defun api:difference (object1 object2 &key (test #'eql))
+(defun api:difference (object1 object2)
   (with-configuration object1
     (labels ((insert (key value node)
                (if (api:emptyp node) 
@@ -432,8 +434,9 @@
                          ((plusp order)
                           (let ((new-right (insert key value right)))
                             (if (eq right new-right) node (rebalance make-node nkey nvalue left new-right))))
-                         ((funcall test value nvalue) node)
-                         (t (make-node key value left right)))))))
+                         (t (error "should not happen"))
+                         #-(and) ((funcall test value nvalue) node)
+                         #-(and) (t (make-node key value left right)))))))
              (concat (tree1 tree2)
                (cond
                  ((api:emptyp tree1) tree2)
@@ -714,6 +717,18 @@
       (error "the option ~S is required" :comparator))
         
     `(progn
+
+       ;; Note: the only reason for us to remember this information is, that we do not
+       ;; want to burn through gensyms whenever a file is reloaded during development.
+       ;; By remembering the variables like this, we can re-use them in the macro expansion.
+       ;; But the code should work just as fine if we did not re-use the identifiers like
+       ;; that.
+       ;;
+       ;; This has nothing to do with our MAKE-LOAD-FORM method above. The information
+       ;; required by that code are taken from the results of `configuration` as it should
+       ;; be. Alternatively, we could generate the method for MAKE-LOAD-FORM below, too,
+       ;; but that would force another method onto the function for each new search tree
+       ;; subtype.
        
        (eval-when (:compile-toplevel :load-toplevel :execute)
          (setf (get ',name 'wbtree-tree-info) ',tree-info))

@@ -75,7 +75,7 @@ this example.)
  
  - Function `wbtree:correlate-nodes` _function_ _object1_ _object2_ `&rest` _iterator-options_ &rarr; _unspecific_
 
- - Function `wbtree:difference` _object1_ _object2_ `&key` _test_ &rarr; _new-object_
+ - Function `wbtree:difference` _object1_ _object2_ &rarr; _new-object_
 
  - Function `wbtree:emptyp` _object_ &rarr; _boolean_
  
@@ -115,7 +115,7 @@ this example.)
    Answers the node with the largest key in search tree _object_ that is less 
    than or equal to _key_. If no such key exists, this function answers `nil`.
 
- - Function `wbtree:intersection` _object1_ _object2_ `&key` _combiner_ _test_ &rarr; _new-object_
+ - Function `wbtree:intersection` _object1_ _object2_ `&key` _combiner_ &rarr; _new-object_
 
  - Function `wbtree:key` _node_ &rarr; _value_
  
@@ -169,7 +169,7 @@ this example.)
    Answers the size (i.e., number of key/value pairs it contains) of the search tree whose 
    root is _node_.
    
- - Function `wbtree:union` _object1_ _object2_ `&key` _combiner_ _test_ &rarr; _new-object_
+ - Function `wbtree:union` _object1_ _object2_ `&key` _combiner_ &rarr; _new-object_
  
  - Function `wbtree:update` _key_ _value_ _object_ `&key` _test_ &rarr; _new-object_ _change_
  
