@@ -94,3 +94,15 @@
     (is (eql 2 (w:size new-tree)))
     (is-true (w:find "World" new-tree))
     (is-true (w:find "Holla" new-tree))))
+
+
+
+#-(and)
+(w:do ((key value) (loop for k upfrom 0 below 26
+                         for object = (string-tree (string "A") k) then (w:update (string (code-char (+ (char-code #\A) k))) k object)
+                         finally (return (print object)))
+       :above "A"
+       :to "M"
+       :from-end t
+       )
+      (print (list key value)))

@@ -137,8 +137,33 @@ this example.)
  
  - Function `wbtree:minimum-node` _object_ &rarr; _node_
  
- - Function `wbtree:node-iterator` _object_ `&key` _from-end_ _from_ _to_ _above_ _below_ _range_ &rarr; _iterator_
+ - Function `wbtree:modify` _key_ _function_ _object_ &rarr; _new-object_ _old-node_ _new-node_
  
+ - Function `wbtree:next-node` _iterator_ &rarr; _node_
+ 
+ - Function `wbtree:node-iterator` _object_ `&key` _from-end_ _start_ _end_ _from_ _to_ _above_ _below_ _range_ &rarr; _iterator_
+ 
+   Answers an iterator, that produces the nodes in search tree _object_. If _from-end_,
+   the nodes will be generated in descending tree order, otherwise they will be produced
+   in ascending order.
+   
+   The _range_ argument can be used to control the subset of nodes to be included in
+   the iteration. It must be a function of a single argument, a tree node. The function
+   returns a negative integer, if the node's key is too small to be included in the
+   result, and a positive integer, if the node's key is too large. If the function
+   returns 0, the node will be part of the iterator's result.
+   
+   Besides supplying a _range_ function, the caller can control the subset using any
+   combination of the arguments _from_, _to_, _above_, _below_, _start_, and _end_ as
+   follows:
+
+     - _from_ excludes all nodes, whose keys are less than this value
+     - _to_ excludes all nodes, whose keys are greater than this value
+     - _above_ excludes all nodes, whose keys are less than or equal to this value
+     - _below_ excludes all nodes, whose keys are greater than or equal to this value
+     - _start_ if not _from-end_ behaves as _from_ otherwise behaves as _to_
+     - _end_ if not _from-end_ behaves as _below_ otherwise behaves as _above_
+      
  - Function `wbtree:remove` _key_ _object_ &rarr; _new-object_ _change_ 
    
    Answers a copy of search tree _object_, from which the entry for _key_ has been
