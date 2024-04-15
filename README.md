@@ -224,10 +224,10 @@ this example.)
    in ascending order.
    
    The _comparator_ argument can be used to control the subset of nodes to be included in
-   the iteration. It must be a function of a single argument, a tree node. The function
-   returns a negative integer, if the node's key is too small to be included in the
-   result, and a positive integer, if the node's key is too large. If the function
-   returns 0, the node will be part of the iterator's result.
+   the iteration. It must be a function of a single argument, a key. The function
+   returns a negative integer, if the key is too small to be included in the result, and 
+   a positive integer, if the node's key is too large. If the function returns 0, the 
+   node associated with that key will be part of the iterator's result.
    
    Besides supplying a _range_ function, the caller can control the subset using any
    combination of the arguments _min_, _max_, _above_, _below_, _start_, and _end_ as
