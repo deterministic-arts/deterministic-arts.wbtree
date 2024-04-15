@@ -153,6 +153,7 @@
                                     (t 0)))))
          (scrambled-keys (fisher-yates sorted-keys))
          (tree (reduce (lambda (tree key) (w:update key key tree)) scrambled-keys :initial-value (string-tree))))
+    (wi:check-invariants tree)
     (loop
       for from-end in '(nil t)
       do (loop
@@ -174,4 +175,4 @@
                                          (expected-keys (apply #'pick-matches sorted-keys selection))
                                          (produced-keys (mapcar #'car (collect-pairs* tree selection))))
                                     (is (equal expected-keys produced-keys)
-                                        "Checked with range options ~S" selection))))))))))
+                                        "Checked with range options ~S, build order ~S" selection scrambled-keys))))))))))

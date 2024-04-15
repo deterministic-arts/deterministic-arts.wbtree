@@ -584,6 +584,7 @@
                order))))))
 
 (defun api:node-iterator* (object &optional options &aux range-test)
+  (declare (dynamic-extent options))
   (with-configuration object
     (destructuring-bind (&key from-end (comparator nil have-comparator) (min nil have-min) (max nil have-max)
                            (above nil have-above) (below nil have-below) (start nil have-start) (end nil have-end))
@@ -671,6 +672,7 @@
 
 (defun api:node-iterator (object &rest options &key from-end min max below above start end comparator)
   (declare (ignore from-end min max below above start end comparator))
+  (declare (dynamic-extent options comparator))
   (api:node-iterator* object options))
 
 (declaim (inline api:next-node))
@@ -755,6 +757,9 @@
     ((> object2 object2) 1)
     (t 0)))
 
+(defun api:compare-characters (object1 object2)
+  (signum (- (char-code object1) (char-code object2))))
+
 (defun api:compare-strings (string1 string2 &key (start1 0) end1 (start2 0) end2)
   (let* ((end1 (or end1 (length string1)))
          (end2 (or end2 (length string2)))
@@ -763,9 +768,9 @@
          (clen (min len1 len2))
          (difference (mismatch string1 string2 :start1 start1 :end1 (+ start1 clen) :start2 start2 :end2 (+ start2 clen))))
     (if (not difference)
-        (signum (- len1 len2))
-        (signum (- (char-code (char string1 difference))
-                   (char-code (char string2 (+ start2 (- difference start1)))))))))
+        (api:compare-reals len1 len2)
+        (api:compare-characters (char string1 difference)
+                                (char string2 (+ start2 (- difference start1)))))))
 
 (defun compare-strings (string1 string2)
   (let* ((len1 (length string1))
@@ -773,9 +778,9 @@
          (clen (min len1 len2))
          (difference (mismatch string1 string2 :end1 clen :end2 clen)))
     (if (not difference)
-        (signum (- len1 len2))
-        (signum (- (char-code (char string1 difference))
-                   (char-code (char string2 difference)))))))
+        (api:compare-reals len1 len2)
+        (api:compare-characters (char string1 difference)
+                                (char string2 difference)))))
 
 (define-setf-expander api:find (key-form place &optional (default nil have-default)
                                 &environment env)

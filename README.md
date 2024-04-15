@@ -141,28 +141,51 @@ this example.)
  
  - Function `wbtree:next-node` _iterator_ &rarr; _node_
  
- - Function `wbtree:node-iterator` _object_ `&key` _from-end_ _start_ _end_ _from_ _to_ _above_ _below_ _range_ &rarr; _iterator_
+   Answers the next available node in _iterator_ and advances the iterators's
+   internal state. If the iterator has reached the end of the range it iterates
+   over (or has produced all nodes from the underlying tree), answers `nil`.
+   
+   Unlike almost all other functions exposed by this library, **this function has 
+   side-effects** It modifies the iterator's internal state. Calling it multiple times 
+   on an exhausted iterator is harmless, though.
+ 
+ - Function `wbtree:node-iterator` _object_ `&key` _from-end_ _start_ _end_ _min_ _max_ _above_ _below_ _comparator_ &rarr; _iterator_
  
    Answers an iterator, that produces the nodes in search tree _object_. If _from-end_,
    the nodes will be generated in descending tree order, otherwise they will be produced
    in ascending order.
    
-   The _range_ argument can be used to control the subset of nodes to be included in
+   The _comparator_ argument can be used to control the subset of nodes to be included in
    the iteration. It must be a function of a single argument, a tree node. The function
    returns a negative integer, if the node's key is too small to be included in the
    result, and a positive integer, if the node's key is too large. If the function
    returns 0, the node will be part of the iterator's result.
    
    Besides supplying a _range_ function, the caller can control the subset using any
-   combination of the arguments _from_, _to_, _above_, _below_, _start_, and _end_ as
+   combination of the arguments _min_, _max_, _above_, _below_, _start_, and _end_ as
    follows:
 
-     - _from_ excludes all nodes, whose keys are less than this value
-     - _to_ excludes all nodes, whose keys are greater than this value
+     - _min_ excludes all nodes, whose keys are less than this value
+     - _max_ excludes all nodes, whose keys are greater than this value
      - _above_ excludes all nodes, whose keys are less than or equal to this value
      - _below_ excludes all nodes, whose keys are greater than or equal to this value
-     - _start_ if not _from-end_ behaves as _from_ otherwise behaves as _to_
+     - _start_ if not _from-end_ behaves as _min_ otherwise behaves as _max_
      - _end_ if not _from-end_ behaves as _below_ otherwise behaves as _above_
+     
+   i.e., _min_, _max_, _above_, and _below_ are always defined in terms of the search
+   tree's own comparator function, whereas _start_ and _end_ are sensitive to the 
+   requested iteration order. 
+     
+   Any combination of the selection arguments can be supplied. The effective test acts
+   as the conjunction of all supplied individual tests, i.e., all criteria must be 
+   satisfied in order for a node to be selected. If criteria contradict each other,
+   no nodes will be produced when the iteration is actually performed.
+     
+ - Function `wbtree:node-iterator*` _object_ `&optional` _options_ &rarr; _iterator_
+ 
+   Like `wbtree:node-iterator` but takes its range selection and iteration order from
+   the list _options_. The value of _options_ must be a property list. See `wbtree:node-iterator`
+   for a description of supported options
       
  - Function `wbtree:remove` _key_ _object_ &rarr; _new-object_ _change_ 
    
@@ -291,6 +314,27 @@ this example.)
       documentation string via `cl:documentation`.
 
  - Macro `wbtree:do` `(`_bindings_ _object_ `&rest` _options_ `)` `&body` _body_
+ 
+   Iterates over all entries in the search tree produced by _object_. Iteration order
+   and subset/range selection can be controlled by _options_ (see `wbtree:node-iterator`
+   for details.) The default is to iterate over all nodes from the one with the smallest
+   key to the one with the largested key in order.
+   
+   If _bindings_ is a symbol, it's taken to be a variable, and in each iteration 
+   step, it will be bound to the node produced in that step. Otherwise, _bindings_
+   must be a list of at least one and at most three variables:
+   
+   ```
+   (key [value [node]])
+   ```
+   
+   that will be bound to the node's key, value, and the node itself in each iteration
+   step. 
+   
+   The expansion of this macro establishes an anonymous block around itself, from 
+   which code in _body_ may `return` in order to stop iteration early and produce a
+   result value other than `nil`. Further, the forms in _body_ are placed in a `tagbody`
+   and can thus use labels and `go` to modify their control flow. 
  
 ## Example
 
