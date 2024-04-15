@@ -69,13 +69,41 @@ this example.)
  
  - Function `wbtree:compare-from-lessp` _predicate_ &rarr; _comparator_
  
+   Answers a comparator function whose implementation is derived from _predicate_
+   which must be a function taking two arguments, which returns true, if the first
+   argument is stricly less than the second one.
+ 
  - Function `wbtree:compare-reals` _number1_ _number2_ &rarr; _ordering_
+ 
+   A comparator function, that compares `real` numbers.
  
  - Function `wbtree:compare-strings` _string1_ _string2_ `&key` _start1_ _end1_ _start2_ _end2_ &rarr; _ordering_
  
+   Compares _string1_ and _string2_ (or substrings as identified by the bounding
+   sequence index designators _start1_ / _end1_ for _string_1 and _start2_ / _end2_
+   for _string2_), and returns a negative integer, if _string1_ is considered less 
+   than _string2_, a positive integer, if _string1_ is greater than _string2_, or
+   0, if the portions compared are equal. The comparison is case-sensitive.
+ 
  - Function `wbtree:correlate-nodes` _function_ _object1_ _object2_ `&rest` _iterator-options_ &rarr; _unspecific_
 
+   Correlates the nodes of search trees _object1_ and _object2_ by their keys, and
+   invokes the given function once per unique key found. The _function_ must accept
+   two arguments, both of which will either be tree nodes or `nil` when invoked.
+   
+   In each invocation, the first argument will be the node from tree _object1_, and
+   the second argument will be the node from tree _object2_. If a key is present only
+   in one of the search trees, the corresponding argument for the other tree will be
+   `nil`.
+   
+   Iteration order and range/subset selection can be controlled by the remaining
+   arguments _iterator-options_. See `wbtree:iterator` for a description of supported
+   options and their significance.
+
  - Function `wbtree:difference` _object1_ _object2_ &rarr; _new-object_
+
+   Answers a copy of the search tree _object1_ from which all entries have been
+   removed, whose keys match one of the keys in search tree _object2_.
 
  - Function `wbtree:emptyp` _object_ &rarr; _boolean_
  
@@ -117,6 +145,15 @@ this example.)
 
  - Function `wbtree:intersection` _object1_ _object2_ `&key` _combiner_ &rarr; _new-object_
 
+   Answers a search tree of the same variety as _object1_ and _object2_, whose
+   entries are formed by intersecting the key set of _object1_ with the key set
+   of _object2_. The associated value is computed by invoking _combiner_ with
+   three arguments: the key in question, its associated value in _object1_, and
+   its associated value in _object2_. Whatever the _combiner_ returns will then
+   be used as the associated value in the intersection.
+   
+   The default _combiner_ always simply picks the value from _object2_.
+
  - Function `wbtree:key` _node_ &rarr; _value_
  
    Answers the value of the key field of _node_. If _node_ is an empty tree node,
@@ -131,13 +168,44 @@ this example.)
 
  - Function `wbtree:maximum-key` _object_ `&optional` _default_ &rarr; _key_ _indicator_
 
+   Answers the largest key in search tree _object_. If _object_ is empty, returns
+   _default_ instead. The secondary value _indicator_ is true, if the first value
+   was found in the tree, and false, if it has been defaulted.
+
  - Function `wbtree:maximum-node` _object_ &rarr; _node_
+ 
+   Answers the node with the largest key present in search tree _object_. If the
+   tree is empty, answer `nil` instead.
  
  - Function `wbtree:minimum-key` _object_ `&optional` _default_ &rarr; _key_ _indicator_
  
+   Answers the smallest key in search tree _object_. If _object_ is empty, returns
+   _default_ instead. The secondary value _indicator_ is true, if the first value
+   was found in the tree, and false, if it has been defaulted.
+ 
  - Function `wbtree:minimum-node` _object_ &rarr; _node_
  
+   Answers the node with the smallest key present in search tree _object_. If the
+   tree is empty, answer `nil` instead.
+ 
  - Function `wbtree:modify` _key_ _function_ _object_ &rarr; _new-object_ _old-node_ _new-node_
+ 
+   Computes a modification to the search tree _object_. Invokes _function_ on 
+   the node matching _key_ (or `nil` if the key is not currently present in the
+   search tree.) The function must accept two arguments. The first one will be 
+   the value of _key_, and the second one will be the node found or `nil`, if 
+   the key is not present.
+   
+   The function must return two values, _action_ and _value_. The _action_ 
+   controls the modification to be made to _object_ and must be one of
+   
+    - `nil` do not modify anything
+    - `:remove` remove the node from the tree; _value_ is ignored
+    - `:update` update the key's associated value to _value_
+    
+   In theory, this function could be used to implement `wbtree:update` as well
+   as `wbtree:remove`. The actual implementations are slightly more efficient,
+   though.
  
  - Function `wbtree:next-node` _iterator_ &rarr; _node_
  
@@ -218,6 +286,16 @@ this example.)
    root is _node_.
    
  - Function `wbtree:union` _object1_ _object2_ `&key` _combiner_ &rarr; _new-object_
+ 
+   Answers a search tree of the same variety as _object1_ and _object2_, whose
+   entries are the entries of _object1_ and _object2_ combined. For keys only present
+   in one of the input trees, the associated value found in that tree is used. For
+   keys present in both, the `combiner` function is invoked with three arguments:
+   the key in question, the associated value in _object1_, and the associated value
+   in _object2_. The return value is then used as associated value in the result 
+   produced by this function.
+   
+   The default _combiner_ is a function, which always picks the value found in _object2_.
  
  - Function `wbtree:update` _key_ _value_ _object_ `&key` _test_ &rarr; _new-object_ _change_
  
@@ -335,8 +413,53 @@ this example.)
    which code in _body_ may `return` in order to stop iteration early and produce a
    result value other than `nil`. Further, the forms in _body_ are placed in a `tagbody`
    and can thus use labels and `go` to modify their control flow. 
+   
+# Comparisons
+
+There are other libraries with similar goals available on Quicklisp. 
+
+## FSet
+
+The `FSet` library by Scott L. Burson has a similar feature set to this library. The
+main trade-off that does not work well for me is, that all comparisons are performed
+through a single global `compare` function. That means, that it is hard to have 
+different behaviours for some underlying key type in the same lisp image (e.g.,
+one tree with strings as keys that uses case-sensitive comparisons, and another one
+that uses case-insensitive comparisons.) To achieve this, the application would have
+to introduce a "wrapper" type
+
+```common-lisp
+(defstruct (case-insensitive-string (:copier nil) (:conc-name cistr-) (:constructor make-cistr (value)))
+  (value "" :type string :read-only t))
+
+(defmethod compare ((s1 case-insensitive-string) (s2 case-insensitive-string))
+  (cond
+    ((string-lessp s1 s2) :less)
+    ((string-greaterp s1 s2) :greater)
+    (t :equal)))
+```
+
+which I am not particularly fond of.
+
+## Darts.Lib.WBTree
+
+Is the predecessor to this library by the same author (me...) It makes similar
+trade-offs to this library. The most important difference may be, that the old
+library uses an is-strictly-less-than predicate to order the keys, whereas this
+library uses "comparator" functions instead (see above.)
+
+Darts.lib.wbtree is now officially deprecated for new projects, though. Since
+I still have internal consumers for that library, it may receive maintenance
+updates for some time. But new features will be added here.
+
+## Others
+
+There was at least one other library I had once found, that stored the comparison
+function in every node if I remember correctly, and hence was more flexible than 
+this one on paper. Unfortunately, I have never found a need for that much flexibility,
+and prefer to not blow up the size of tree nodes even more.
  
-## Example
+# Example
 
 ```common-lisp
 (wbtree:define command-map
@@ -366,3 +489,14 @@ this example.)
 ```
 
 (this is stupid...)
+
+# TODOs
+
+ - There is currently a lot of code duplication in this library. The main
+   reason for that is the need to allow internal helpers to access the comparison 
+   and constructor functions, preferrably without requiring another round of
+   generic dispatch.
+
+   Right now, I decide to live with this. Depending on whether this turns out
+   to be a maintenance burden, I may have to clean things up later, though.
+   
