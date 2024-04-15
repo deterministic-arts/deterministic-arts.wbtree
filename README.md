@@ -54,6 +54,8 @@ this example.)
    option of a `defstruct` form) itself. Only `wbtree:define` must be used to derive
    new subtypes.
    
+   Client code must also not derive subtypes from types introduced via `wbtree:define`.
+      
 ## Functions
 
  - Function `wbtree:ceiling-key` _key_ _object_ `&optional` _default_ &rarr; _key_ _indicator_
@@ -390,6 +392,11 @@ this example.)
       Provides a documentation string for the new search tree type. This option is
       currently ignored when present. Future versions might provide access to the
       documentation string via `cl:documentation`.
+      
+   Each subtype of `wbtree:node` introduced via this macro is proper class of the
+   `structure-class` variety, and can be used for generic dispatch. Client code 
+   **must not** introduce derived subtypes of these classes though (i.e., `:include` 
+   them in other `defstruct`-defined classes.)
 
  - Macro `wbtree:do` `(`_bindings_ _object_ `&rest` _options_ `)` `&body` _body_
  
@@ -434,8 +441,8 @@ to introduce a "wrapper" type
 
 (defmethod compare ((s1 case-insensitive-string) (s2 case-insensitive-string))
   (cond
-    ((string-lessp s1 s2) :less)
-    ((string-greaterp s1 s2) :greater)
+    ((string-lessp (cistr-value s1) (cistr-value s2)) :less)
+    ((string-greaterp (cistr-value s1) (cistr-value s2)) :greater)
     (t :equal)))
 ```
 
