@@ -26,9 +26,9 @@
   (:export #:node #:nodep #:key #:value #:left #:right #:size #:emptyp #:find #:update
            #:find-node #:remove #:fold #:map #:union #:intersection #:difference #:iterator
            #:define #:minimum-node #:maximum-node #:floor-node #:ceiling-node #:minimum-key
-           #:maximum-key #:floor-key #:ceiling-key #:equal #:node-iterator #:do #:correlate-nodes
-           #:compare-from-lessp #:compare-strings #:compare-reals #:next-node #:reduce
-           #:reduce-nodes #:modify))
+           #:maximum-key #:floor-key #:ceiling-key #:equal #:node-iterator #:node-iterator*
+           #:do #:correlate-nodes #:compare-from-lessp #:compare-strings #:compare-reals
+           #:next-node #:reduce #:reduce-nodes #:modify))
 
 (defpackage #:deterministic-arts.wbtree.internals
   (:use #:common-lisp)

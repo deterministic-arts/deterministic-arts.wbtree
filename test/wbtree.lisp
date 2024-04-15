@@ -7,6 +7,48 @@
   (:constructor* string-tree)
   (:predicate string-tree-p))
 
+(defun collect-pairs* (object &optional options)
+  (let ((iterator (w:node-iterator* object options)))
+    (loop
+      for node = (w:next-node iterator) then (w:next-node iterator) while node
+      as key = (w:key node)
+      as value = (w:value node)
+      collecting (cons key value))))
+
+(defun generate-strings (count min-key-length)
+  (loop
+    for number upfrom 0 below count
+    collecting (format nil "~V,'0D" min-key-length number)))
+
+(defun pick-matches (list &key from-end min max above below comparator)
+  (let ((picks (loop
+                 for string in list
+                 when (and (or (not min) (string<= min string))
+                           (or (not max) (string<= string max))
+                           (or (not above) (string< above string))
+                           (or (not below) (string< string below))
+                           (or (not comparator) (zerop (funcall comparator string))))
+                   collect string)))
+    (if from-end (reverse picks) picks)))
+
+(defun fisher-yates (sequence)
+  (let* ((array (if (vectorp sequence) (copy-seq sequence) (map 'vector #'identity sequence)))
+         (length (length array)))
+    (loop
+      for i downfrom (- length 1) to 1
+      as j = (random (1+ i))
+      do (rotatef (aref array i) (aref array j)))
+    array))
+
+(defun random-string-tree (node-count key-range key-length)
+  (loop
+    with result = (string-tree)
+    while (< (w:size result) node-count)
+    do (let* ((number (random key-range))
+              (text (format nil "~V,'0D" key-length number)))
+         (setf (w:find text result) number))
+    finally (return result)))
+
 (def-suite deterministic-arts.wbtree.test
   :description "Tests for the WB tree implementation")
 
@@ -95,14 +137,41 @@
     (is-true (w:find "World" new-tree))
     (is-true (w:find "Holla" new-tree))))
 
+(def-suite deterministic-arts.wbtree.test.iteration :in deterministic-arts.wbtree.test)
 
+(test (empty-tree :suite deterministic-arts.wbtree.test.iteration)
+  (is (null (collect (string-tree)))))
 
-#-(and)
-(w:do ((key value) (loop for k upfrom 0 below 26
-                         for object = (string-tree (string "A") k) then (w:update (string (code-char (+ (char-code #\A) k))) k object)
-                         finally (return (print object)))
-       :above "A"
-       :to "M"
-       :from-end t
-       )
-      (print (list key value)))
+(test (iteration :suite deterministic-arts.wbtree.test.iteration)
+  (let* ((sorted-keys (generate-strings 129 3))
+         (lowers (list nil (car sorted-keys) (cadr sorted-keys)))
+         (uppers (list nil (car (last sorted-keys 1)) (car (last sorted-keys 2))))
+         (comparators (list nil (lambda (string)
+                                  (cond
+                                    ((string< string "005") -1)
+                                    ((string> string "099") 1)
+                                    (t 0)))))
+         (scrambled-keys (fisher-yates sorted-keys))
+         (tree (reduce (lambda (tree key) (w:update key key tree)) scrambled-keys :initial-value (string-tree))))
+    (loop
+      for from-end in '(nil t)
+      do (loop
+           for min in lowers
+           do (loop
+                for above in lowers
+                do (loop
+                     for max in uppers
+                     do (loop
+                          for below in uppers
+                          do (loop
+                               for comparator in comparators
+                               do (let* ((selection (nconc (list :from-end from-end)
+                                                           (when comparator (list :comparator comparator))
+                                                           (when min (list :min min))
+                                                           (when above (list :above above))
+                                                           (when max (list :max max))
+                                                           (when below (list :below below))))
+                                         (expected-keys (apply #'pick-matches sorted-keys selection))
+                                         (produced-keys (mapcar #'car (collect-pairs* tree selection))))
+                                    (is (equal expected-keys produced-keys)
+                                        "Checked with range options ~S" selection))))))))))

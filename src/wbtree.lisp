@@ -559,19 +559,19 @@
 
 (defun make-range-from-test (compare value)
   (lambda (node)
-    (if (not (minusp (funcall compare (api:key node) value))) 0 -1)))
+    (if (not (minusp (funcall compare node value))) 0 -1)))
 
 (defun make-range-above-test (compare value)
   (lambda (node)
-    (if (plusp (funcall compare (api:key node) value)) 0 -1)))
+    (if (plusp (funcall compare node value)) 0 -1)))
 
 (defun make-range-to-test (compare value)
   (lambda (node)
-    (if (not (plusp (funcall compare (api:key node) value))) 0 1)))
+    (if (not (plusp (funcall compare node value))) 0 1)))
 
 (defun make-range-below-test (compare value)
   (lambda (node)
-    (if (minusp (funcall compare (api:key node) value)) 0 1)))
+    (if (minusp (funcall compare node value)) 0 1)))
 
 (defun compose-range-test (test1 test2)
   (cond
@@ -583,87 +583,95 @@
                (funcall test2 node)
                order))))))
 
-(defun api:node-iterator (object
-                          &key from-end range (from nil have-from) (to nil have-to) (above nil have-above)
-                            (below nil have-below) (start nil have-start) (end nil have-end))
+(defun api:node-iterator* (object &optional options &aux range-test)
   (with-configuration object
-    (when have-from (setf range (compose-range-test range (make-range-from-test compare from))))
-    (when have-to (setf range (compose-range-test range (make-range-to-test compare to))))
-    (when have-above (setf range (compose-range-test range (make-range-above-test compare above))))
-    (when have-below (setf range (compose-range-test range (make-range-below-test compare below))))
-    (when have-start (setf range (compose-range-test range (if from-end (make-range-to-test compare start) (make-range-from-test compare start)))))
-    (when have-end (setf range (compose-range-test range (if from-end (make-range-above-test compare end) (make-range-below-test compare end)))))
-    (if (not range)
-        (if (not from-end)
-            (labels
-                ((descend (node stack)
-                   (if (api:emptyp node) stack
-                       (descend (api:left node) (cons node stack))))
-                 (next (stack)
-                   (if (null stack)
-                       (values nil nil)
-                       (values (car stack) (descend (api:right (car stack)) (cdr stack))))))
-              (let ((stack (descend object nil)))
-                (lambda ()
-                  (and stack
-                       (multiple-value-bind (node stack*) (next stack)
-                         (setf stack stack*)
-                         node)))))
-            (labels
-                ((descend (node stack)
-                   (if (api:emptyp node) stack
-                       (descend (api:right node) (cons node stack))))
-                 (next (stack)
-                   (if (null stack)
-                       (values nil nil)
-                       (values (car stack) (descend (api:left (car stack)) (cdr stack))))))
-              (let ((stack (descend object nil)))
-                (lambda ()
-                  (and stack
-                       (multiple-value-bind (node stack*) (next stack)
-                         (setf stack stack*)
-                         node))))))
-        (if (not from-end)
-            (labels
-                ((descend (node stack)
-                   (cond
-                     ((api:emptyp node) stack)
-                     ((not (minusp (funcall range node))) (descend (api:left node) (cons node stack)))
-                     (t (descend (api:right node) stack))))
-                 (next (stack)
-                   (if (null stack) (values nil nil)
-                       (let* ((head (car stack))
-                              (order (funcall range head)))
-                         (cond
-                           ((minusp order) (error "should not happen"))
-                           ((zerop order) (values head (descend (api:right head) (cdr stack))))
-                           (t (next (cdr stack))))))))
-              (let ((stack (descend object nil)))
-                (lambda ()
-                  (and stack
-                       (multiple-value-bind (node stack*) (next stack)
-                         (setf stack stack*)
-                         node)))))
-            (labels
-                ((descend (node stack)
-                   (cond
-                     ((api:emptyp node) stack)
-                     ((not (plusp (funcall range node))) (descend (api:right node) (cons node stack)))
-                     (t (descend (api:left node) stack))))
-                 (next (stack)
-                   (if (null stack) (values nil nil)
-                       (let* ((head (car stack))
-                              (order (funcall range head)))
-                         (cond
-                           ((plusp order) (error "should not happen"))
-                           ((zerop order) (values head (descend (api:left head) (cdr stack))))
-                           (t (next (cdr stack))))))))
-              (let ((stack (descend object nil)))
-                (lambda ()
-                  (and stack
-                       (multiple-value-bind (node stack*) (next stack)
-                         (setf stack stack*)
-                         node)))))))))
+    (destructuring-bind (&key from-end (comparator nil have-comparator) (min nil have-min) (max nil have-max)
+                           (above nil have-above) (below nil have-below) (start nil have-start) (end nil have-end))
+        options
+      (when have-comparator (setf range-test (etypecase comparator
+                                               (function comparator)
+                                               (symbol (fdefinition comparator)))))
+      (when have-min (setf range-test (compose-range-test range-test (make-range-from-test compare min))))
+      (when have-max (setf range-test (compose-range-test range-test (make-range-to-test compare max))))
+      (when have-above (setf range-test (compose-range-test range-test (make-range-above-test compare above))))
+      (when have-below (setf range-test (compose-range-test range-test (make-range-below-test compare below))))
+      (when have-start (setf range-test (compose-range-test range-test (if from-end (make-range-to-test compare start) (make-range-from-test compare start)))))
+      (when have-end (setf range-test (compose-range-test range-test (if from-end (make-range-above-test compare end) (make-range-below-test compare end)))))
+      (if (not range-test)
+          (if (not from-end)
+              (labels
+                  ((descend (node stack)
+                     (if (api:emptyp node) stack
+                         (descend (api:left node) (cons node stack))))
+                   (next (stack)
+                     (if (null stack)
+                         (values nil nil)
+                         (values (car stack) (descend (api:right (car stack)) (cdr stack))))))
+                (let ((stack (descend object nil)))
+                  (lambda ()
+                    (and stack
+                         (multiple-value-bind (node stack*) (next stack)
+                           (setf stack stack*)
+                           node)))))
+              (labels
+                  ((descend (node stack)
+                     (if (api:emptyp node) stack
+                         (descend (api:right node) (cons node stack))))
+                   (next (stack)
+                     (if (null stack)
+                         (values nil nil)
+                         (values (car stack) (descend (api:left (car stack)) (cdr stack))))))
+                (let ((stack (descend object nil)))
+                  (lambda ()
+                    (and stack
+                         (multiple-value-bind (node stack*) (next stack)
+                           (setf stack stack*)
+                           node))))))
+          (if (not from-end)
+              (labels
+                  ((descend (node stack)
+                     (cond
+                       ((api:emptyp node) stack)
+                       ((not (minusp (funcall range-test (api:key node)))) (descend (api:left node) (cons node stack)))
+                       (t (descend (api:right node) stack))))
+                   (next (stack)
+                     (if (null stack) (values nil nil)
+                         (let* ((head (car stack))
+                                (order (funcall range-test (api:key head))))
+                           (cond
+                             ((minusp order) (error "should not happen"))
+                             ((zerop order) (values head (descend (api:right head) (cdr stack))))
+                             (t (next (cdr stack))))))))
+                (let ((stack (descend object nil)))
+                  (lambda ()
+                    (and stack
+                         (multiple-value-bind (node stack*) (next stack)
+                           (setf stack stack*)
+                           node)))))
+              (labels
+                  ((descend (node stack)
+                     (cond
+                       ((api:emptyp node) stack)
+                       ((not (plusp (funcall range-test (api:key node)))) (descend (api:right node) (cons node stack)))
+                       (t (descend (api:left node) stack))))
+                   (next (stack)
+                     (if (null stack) (values nil nil)
+                         (let* ((head (car stack))
+                                (order (funcall range-test (api:key head))))
+                           (cond
+                             ((plusp order) (error "should not happen"))
+                             ((zerop order) (values head (descend (api:left head) (cdr stack))))
+                             (t (next (cdr stack))))))))
+                (let ((stack (descend object nil)))
+                  (lambda ()
+                    (and stack
+                         (multiple-value-bind (node stack*) (next stack)
+                           (setf stack stack*)
+                           node))))))))))
+
+(defun api:node-iterator (object &rest options &key from-end min max below above start end comparator)
+  (declare (ignore from-end min max below above start end comparator))
+  (api:node-iterator* object options))
 
 (declaim (inline api:next-node))
 
@@ -672,8 +680,8 @@
 
 (defun api:correlate-nodes (function object1 object2 &rest options)
   (with-configuration object1
-    (let ((iter1 (apply #'api:node-iterator object1 options))
-          (iter2 (apply #'api:node-iterator object2 options)))
+    (let ((iter1 (api:node-iterator* object1 options))
+          (iter2 (api:node-iterator* object2 options)))
       (named-let next ((head1 (api:next-node iter1)) (head2 (api:next-node iter2)))
         (cond
           ((not head1) (funcall function nil head2) (next nil (api:next-node iter2)))
