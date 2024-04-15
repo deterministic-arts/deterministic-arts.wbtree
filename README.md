@@ -448,6 +448,15 @@ to introduce a "wrapper" type
 
 which I am not particularly fond of.
 
+## Sycamore
+
+Another one. Stores the comparison function in the tree (it adds an artificial
+root node, that holds the actual tree and the comparison function.) I never had
+a use case which needed the flexibility to have a per-tree compare function. 
+The additional object-per-tree for the root node wouldn't be that much of an
+overhead (in particular, when comparing it to wrapper-per-keyas is required by
+FSet.)
+
 ## Darts.Lib.WBTree
 
 Is the predecessor to this library by the same author (me...) It makes similar
@@ -458,13 +467,6 @@ library uses "comparator" functions instead (see above.)
 Darts.lib.wbtree is now officially deprecated for new projects, though. Since
 I still have internal consumers for that library, it may receive maintenance
 updates for some time. But new features will be added here.
-
-## Others
-
-There was at least one other library I had once found, that stored the comparison
-function in every node if I remember correctly, and hence was more flexible than 
-this one on paper. Unfortunately, I have never found a need for that much flexibility,
-and prefer to not blow up the size of tree nodes even more.
  
 # Example
 
