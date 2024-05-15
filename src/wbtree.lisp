@@ -521,9 +521,10 @@
                                 (difference* r* r))))))))
       (difference* object1 object2))))
 
-(defun api:equal (object1 object2 &key (test #'equal))
+(defun api:equal (object1 object2 &key (test #'eql))
   (cond
     ((eq object1 object2) t)
+    ((not (eq (type-of object1) (type-of object2))) nil)
     ((api:emptyp object1) (api:emptyp object2))
     ((api:emptyp object2) nil)
     (t (with-configuration object1
@@ -544,6 +545,18 @@
                    (unless (funcall test (api:value head1) (api:value head2)) (return nil))
                    (setf stack1 tail1)
                    (setf stack2 tail2))))))))))
+
+(defun api:hash (object &key (key-hash #'sxhash) (value-hash #'sxhash))
+  (labels
+      ((walk (hash node)
+         (if (api:emptyp node) hash
+             (walk (logand most-positive-fixnum
+                           (+ (* 31 31 (funcall key-hash (api:key node)))
+                              (* 31 (funcall value-hash (api:value node)))
+                              (walk hash (api:left node))))
+                   (api:right node)))))
+    (walk (sxhash (type-of object))
+          object)))
 
 (defmethod make-load-form ((object api:node) &optional environment)
   (declare (ignore environment))
@@ -939,13 +952,18 @@
         (object2 (gensym))
         (order (gensym)))
     (labels
-        ((expand-field (continuation spec)
-           (destructuring-bind (getter comparator) spec
+        ((decode-field (spec)
+           (if (atom spec)
+               (values spec 'api:compare)
+               (destructuring-bind (getter &optional (compare 'api:compare)) spec
+                 (values getter compare))))
+         (expand-field (continuation spec)
+           (multiple-value-bind (getter comparator) (decode-field spec)
              `(let ((,order (,comparator (,getter ,object1) (,getter ,object2))))
                 (if (not (zerop ,order)) ,order ,continuation)))))
       (let* ((clauses (reverse (cons first-field more-fields)))
              (rest (cdr clauses))
-             (tail (destructuring-bind (getter comparator) (car clauses)
+             (tail (multiple-value-bind (getter comparator) (decode-field (car clauses))
                      `(,comparator (,getter ,object1) (,getter ,object2)))))
         `(defun ,name (,object1 ,object2)
            ,(reduce #'expand-field rest
