@@ -28,9 +28,10 @@
            #:define #:minimum-node #:maximum-node #:floor-node #:ceiling-node #:minimum-key
            #:maximum-key #:floor-key #:ceiling-key #:equal #:node-iterator #:node-iterator*
            #:do #:correlate-nodes #:compare-from-lessp #:compare-strings #:compare-reals
-           #:compare-characters #:next-node #:reduce #:reduce-nodes #:modify))
+           #:compare-characters #:next-node #:reduce #:reduce-nodes #:modify #:define-comparator
+           #:compare #:defcompare #:tree #:treep #:make-tree))
 
 (defpackage #:deterministic-arts.wbtree.internals
   (:use #:common-lisp)
   (:local-nicknames (#:api #:deterministic-arts.wbtree))
-  (:export #:check-invariants #:compare-strings))
+  (:export #:check-invariants #:compare-strings #:compare-fixnums))

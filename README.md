@@ -55,6 +55,12 @@ this example.)
    new subtypes.
    
    Client code must also not derive subtypes from types introduced via `wbtree:define`.
+   
+ - Type `wbtree:tree` 
+ 
+   This is a concrete subtype of `wbtree:node` that uses the `wbtree:compare` 
+   generic function as its comparator. This is the only concrete subtype of `wbtree:node` 
+   provided by this library itself.
       
 ## Functions
 
@@ -68,6 +74,30 @@ this example.)
  
    Answers the node with the smallest key in search tree _object_ that is greater 
    than or equal to _key_. If no such key exists, this function answers `nil`.
+   
+ - Function `wbtree:compare` _object1_ _object2_ &rarr; _ordering_
+ 
+   A generic function that compare its arguments for order. Applications can
+   add new methods to this function to support their own key types. The library
+   itself defines the following methods:
+   
+    - Method `wbtree:compare` `string` `string`
+    
+      Strings are compared in a case-sensitive way. If one of the arguments is a 
+      proper prefix of the other, then the shorter string is considered to be 
+      "less" than the other.
+    
+    - Method `wbtree:compare` `real` `real`
+    
+      Based on the standard comparison for real numbers in lisp.
+    
+    - Method `wbtree:compare` `character` `character` 
+    
+      Characters are compare in a case-sensitive way.
+ 
+ - Function `wbtree:compare-characters` _char1_ _char2_ &rarr; _ordering_
+ 
+   A comparator function, that compares `character` values.
  
  - Function `wbtree:compare-from-lessp` _predicate_ &rarr; _comparator_
  
@@ -101,7 +131,7 @@ this example.)
    Iteration order and range/subset selection can be controlled by the remaining
    arguments _iterator-options_. See `wbtree:iterator` for a description of supported
    options and their significance.
-
+   
  - Function `wbtree:difference` _object1_ _object2_ &rarr; _new-object_
 
    Answers a copy of the search tree _object1_ from which all entries have been
@@ -168,6 +198,13 @@ this example.)
    no left child and this function returns `nil` instead (it is the only node for which
    this function returns anything else but a `wbtree:node`)
 
+ - Function `wbtree:make-tree` `&optional` _initial-entries_ &rarr; _tree_
+ 
+   Constructs and returns an instance of `wbtree:tree`. If _initial-entries_ is empty,
+   the returned object will be empty. Otherwise, it must be a property-list of _key_/_value_
+   pairs, and the resulting search tree instance will contain exactly those pairs as
+   its entries.
+
  - Function `wbtree:maximum-key` _object_ `&optional` _default_ &rarr; _key_ _indicator_
 
    Answers the largest key in search tree _object_. If _object_ is empty, returns
@@ -208,6 +245,11 @@ this example.)
    In theory, this function could be used to implement `wbtree:update` as well
    as `wbtree:remove`. The actual implementations are slightly more efficient,
    though.
+   
+   The _old-node_ return value is always the node associated with _key_ in
+   search tree _object_ (or `nil`, if the key is not present there.) The value
+   of _new-node_ is always the node associated with _key_ in _new-object_ (or
+   `nil` if there is no association for key in that tree.)
  
  - Function `wbtree:next-node` _iterator_ &rarr; _node_
  
@@ -287,6 +329,18 @@ this example.)
    Answers the size (i.e., number of key/value pairs it contains) of the search tree whose 
    root is _node_.
    
+ - Function `wbtree:tree` `&rest` _initial-entries_ &rarr; _tree_
+ 
+   Constructs and returns an instance of `wbtree:tree`. If _initial-entries_ is empty,
+   the returned object will be empty. Otherwise, it must be a property-list of _key_/_value_
+   pairs, and the resulting search tree instance will contain exactly those pairs as
+   its entries.
+   
+ - Function `wbtree:treep` _object_ &rarr; _boolean_
+ 
+   Answers true, if _object_ is an instance of class `wbtree:tree` and false 
+   otherwise.
+      
  - Function `wbtree:union` _object1_ _object2_ `&key` _combiner_ &rarr; _new-object_
  
    Answers a search tree of the same variety as _object1_ and _object2_, whose
@@ -397,6 +451,47 @@ this example.)
    `structure-class` variety, and can be used for generic dispatch. Client code 
    **must not** introduce derived subtypes of these classes though (i.e., `:include` 
    them in other `defstruct`-defined classes.)
+   
+ - Macro `wbtree:defcompare` _type_ `(` _object1_ _object2_ `)` `&body` _body_
+ 
+   This is a convenience macro. It can be used to define new methods for the `wbtree:compare` 
+   generic function. 
+   
+   ```common-lisp
+   (wbtree:defcompare integer (object1 object2)
+     (signum (- object1 object2)))
+   ```
+   
+   is entirely equivalent to the form
+   
+   ```common-lisp
+   (defmethod wbtree:compare ((object1 integer) (object2 integer))
+     (signum (- object1 object2)))
+   ```
+   
+ - Macro `wbtree:define-comparator` _name_ `&body` _fields_
+ 
+   Defines a new function _name_ of two arguments. The function returns a negative
+   integer, if the first argument is considered strictly less than the second one,
+   zero, if both arguments are considered equal, and a positive integer, if the
+   first argument is strictly greater than the second one.
+   
+   The comparison is based on the _fields_. Each entry of _field_ is a list of
+   the form `(getter comparator)` where both, _getter_ and _comparator_ must be 
+   function names. The _getter_ function is applied to an object and should answer
+   the value of the underlying field in that object. The _comparator_ is a comparator
+   function used to compare the field values.
+   
+   When the function generated by this macro is called, each of the fields is
+   tried in the order they are defined here. The first field for which the comparator
+   returns non-0 value determines the result. If all comparators return zero, then
+   so does the generated function. Example:
+   
+   ```common-lisp
+   (wbtree:define-comparator compare-conses 
+     (car wbtree:compare)
+     (cdr wbtree:compare))
+   ```
 
  - Macro `wbtree:do` `(`_bindings_ _object_ `&rest` _options_ `)` `&body` _body_
  
@@ -454,7 +549,7 @@ Another one. Stores the comparison function in the tree (it adds an artificial
 root node, that holds the actual tree and the comparison function.) I never had
 a use case which needed the flexibility to have a per-tree compare function. 
 The additional object-per-tree for the root node wouldn't be that much of an
-overhead (in particular, when comparing it to wrapper-per-keyas is required by
+overhead (in particular, when comparing it to wrapper-per-key as is required by
 FSet.)
 
 ## Darts.Lib.WBTree

@@ -598,77 +598,59 @@
       (when have-below (setf range-test (compose-range-test range-test (make-range-below-test compare below))))
       (when have-start (setf range-test (compose-range-test range-test (if from-end (make-range-to-test compare start) (make-range-from-test compare start)))))
       (when have-end (setf range-test (compose-range-test range-test (if from-end (make-range-above-test compare end) (make-range-below-test compare end)))))
-      (if (not range-test)
-          (if (not from-end)
-              (labels
-                  ((descend (node stack)
-                     (if (api:emptyp node) stack
-                         (descend (api:left node) (cons node stack))))
-                   (next (stack)
-                     (if (null stack)
-                         (values nil nil)
-                         (values (car stack) (descend (api:right (car stack)) (cdr stack))))))
-                (let ((stack (descend object nil)))
-                  (lambda ()
-                    (and stack
-                         (multiple-value-bind (node stack*) (next stack)
-                           (setf stack stack*)
-                           node)))))
-              (labels
-                  ((descend (node stack)
-                     (if (api:emptyp node) stack
-                         (descend (api:right node) (cons node stack))))
-                   (next (stack)
-                     (if (null stack)
-                         (values nil nil)
-                         (values (car stack) (descend (api:left (car stack)) (cdr stack))))))
-                (let ((stack (descend object nil)))
-                  (lambda ()
-                    (and stack
-                         (multiple-value-bind (node stack*) (next stack)
-                           (setf stack stack*)
-                           node))))))
-          (if (not from-end)
-              (labels
-                  ((descend (node stack)
-                     (cond
-                       ((api:emptyp node) stack)
-                       ((not (minusp (funcall range-test (api:key node)))) (descend (api:left node) (cons node stack)))
-                       (t (descend (api:right node) stack))))
-                   (next (stack)
-                     (if (null stack) (values nil nil)
-                         (let* ((head (car stack))
-                                (order (funcall range-test (api:key head))))
-                           (cond
-                             ((minusp order) (error "should not happen"))
-                             ((zerop order) (values head (descend (api:right head) (cdr stack))))
-                             (t (next (cdr stack))))))))
-                (let ((stack (descend object nil)))
-                  (lambda ()
-                    (and stack
-                         (multiple-value-bind (node stack*) (next stack)
-                           (setf stack stack*)
-                           node)))))
-              (labels
-                  ((descend (node stack)
-                     (cond
-                       ((api:emptyp node) stack)
-                       ((not (plusp (funcall range-test (api:key node)))) (descend (api:right node) (cons node stack)))
-                       (t (descend (api:left node) stack))))
-                   (next (stack)
-                     (if (null stack) (values nil nil)
-                         (let* ((head (car stack))
-                                (order (funcall range-test (api:key head))))
-                           (cond
-                             ((plusp order) (error "should not happen"))
-                             ((zerop order) (values head (descend (api:left head) (cdr stack))))
-                             (t (next (cdr stack))))))))
-                (let ((stack (descend object nil)))
-                  (lambda ()
-                    (and stack
-                         (multiple-value-bind (node stack*) (next stack)
-                           (setf stack stack*)
-                           node))))))))))
+      (macrolet ((driver (descend next)
+                   (let ((node (gensym))
+                         (stack (gensym))
+                         (new-stack (gensym)))
+                     `(let ((,stack (,descend object nil)))
+                        (lambda ()
+                          (and ,stack
+                               (multiple-value-bind (,node ,new-stack) (,next ,stack)
+                                 (setf ,stack ,new-stack)
+                                 ,node)))))))
+        (if (not range-test)
+            (macrolet ((implementation (left right)
+                         (let ((descend (gensym))
+                               (next (gensym))
+                               (node (gensym))
+                               (stack (gensym)))
+                           `(labels
+                                ((,descend (,node ,stack)
+                                   (if (api:emptyp ,node) ,stack
+                                       (,descend (,left ,node) (cons ,node ,stack))))
+                                 (,next (,stack)
+                                   (if (null ,stack)
+                                       (values nil nil)
+                                       (values (car ,stack) (,descend (,right (car ,stack)) (cdr ,stack))))))
+                              (driver ,descend ,next)))))
+              (if (not from-end)
+                  (implementation api:left api:right)
+                  (implementation api:right api:left)))
+            (macrolet ((implementation (left right minusp)
+                         (let ((descend (gensym))
+                               (next (gensym))
+                               (node (gensym))
+                               (stack (gensym))
+                               (head (gensym))
+                               (order (gensym)))
+                           `(labels
+                                ((,descend (,node ,stack)
+                                   (cond
+                                     ((api:emptyp ,node) ,stack)
+                                     ((not (,minusp (funcall range-test (api:key ,node)))) (,descend (,left ,node) (cons ,node ,stack)))
+                                     (t (,descend (,right ,node) ,stack))))
+                                 (,next (,stack)
+                                   (if (null ,stack) (values nil nil)
+                                       (let* ((,head (car ,stack))
+                                              (,order (funcall range-test (api:key ,head))))
+                                         (cond
+                                           ((,minusp ,order) (error "should not happen"))
+                                           ((zerop ,order) (values ,head (,descend (,right ,head) (cdr ,stack))))
+                                           (t (,next (cdr ,stack))))))))
+                              (driver ,descend ,next)))))
+              (if (not from-end)
+                  (implementation api:left api:right minusp)
+                  (implementation api:right api:left plusp))))))))
 
 (defun api:node-iterator (object &rest options &key from-end min max below above start end comparator)
   (declare (ignore from-end min max below above start end comparator))
@@ -727,16 +709,36 @@
       (recurse object)
       object)))
 
-(defun api:reduce-nodes (function object &rest options &key (initial-value nil have-initial-value) &allow-other-keys)
-  (let* ((options (if have-initial-value
-                      (loop for (key value) on options by #'cddr unless (eq key :initial-value) nconc (list key value))
-                      options))
-         (iterator (apply #'api:node-iterator object options)))
-    (named-let collect ((value initial-value))
-      (let ((node (api:next-node iterator)))
-        (if (not node)
-            value
-            (collect (funcall function value node)))))))
+(defun api:reduce-nodes (function object &rest options &key (initial-value nil have-initial-value) from-end &allow-other-keys)
+  (multiple-value-bind (options fast-path-ok)
+      (if (not have-initial-value)
+          (values options (loop for (key nil) on options by #'cddr always (eq key :from-end)))
+          (loop with fast-path-ok = t 
+                for (key value) on options by #'cddr
+                unless (eq key :initial-value)
+                  nconc (list key value) into new-options
+                  and if (not (eq key :from-end))
+                        do (setf fast-path-ok nil)
+                finally (return (values new-options fast-path-ok))))
+    (if fast-path-ok
+        (labels
+            ((walk-forward (seed node)
+               (if (api:emptyp node) seed
+                   (walk-forward (funcall function (walk-forward seed (api:left node)) node)
+                                 (api:right node))))
+             (walk-backward (seed node)
+               (if (api:emptyp node) seed
+                   (walk-backward (funcall function (walk-backward seed (api:right node)) node)
+                                  (api:left node)))))
+          (if from-end
+              (walk-backward initial-value object)
+              (walk-forward initial-value object)))
+        (let ((iterator (apply #'api:node-iterator object options)))
+          (named-let collect ((value initial-value))
+            (let ((node (api:next-node iterator)))
+              (if (not node)
+                  value
+                  (collect (funcall function value node)))))))))
 
 (defun api:reduce (function object &rest options &key &allow-other-keys)
   (apply #'api:reduce-nodes
@@ -754,8 +756,19 @@
 (defun api:compare-reals (object1 object2)
   (cond
     ((< object1 object2) -1)
-    ((> object2 object2) 1)
+    ((> object1 object2) 1)
     (t 0)))
+
+(defun compare-fixnums (object1 object2)
+  (declare (type fixnum object1 object2))
+  (signum (- object1 object2)))
+
+;; Is it ok to do the character comparison based on the CHAR-CODE like we do
+;; below? The Hyperspec states for CHAR< that "If two characters have identical
+;; implementation-defined attributes, then their ordering by char< is consistent
+;; with the numerical ordering by the predicate < on their codes." And none of
+;; the implementations I use define/use any non-standard character attributes.
+;; Times have changed since Genera was a thing...
 
 (defun api:compare-characters (object1 object2)
   (signum (- (char-code object1) (char-code object2))))
@@ -777,10 +790,12 @@
          (len2 (length string2))
          (clen (min len1 len2))
          (difference (mismatch string1 string2 :end1 clen :end2 clen)))
-    (if (not difference)
-        (api:compare-reals len1 len2)
-        (api:compare-characters (char string1 difference)
-                                (char string2 difference)))))
+    (if difference
+        (signum (- (char-code (char string1 difference)) (char-code (char string2 difference))))
+        (cond
+          ((< len1 len2) -1)
+          ((> len1 len2) 1)
+          (t 0)))))
 
 (define-setf-expander api:find (key-form place &optional (default nil have-default)
                                 &environment env)
@@ -860,6 +875,10 @@
                          (:constructor ,allocator (api:key api:value api:left api:right
                                                    &optional (api:size (+ 1 (api:size api:left) (api:size api:right)))))))
 
+       ;; Note, that DEFVAR is actually ok here, since a) the structure definition
+       ;; never changes (i.e., the instance does not need to be invalidated on redefinition
+       ;; of the WBTREE subtype), and b) the empty node holds no state.
+       
        (defvar ,empty-node (,allocator nil nil nil nil 0))
 
        ,@(when constructor
@@ -874,13 +893,15 @@
        
        ,@(when spread-constructor
            `((defun ,spread-constructor (&rest ,initial-entries)
-               (named-let ,walk ((,initial-entries ,initial-entries)
-                                 (,result ,empty-node))
-                 (if (null ,initial-entries)
-                     ,result
-                     (,walk (cddr ,initial-entries)
-                            (api:update (car ,initial-entries) (cadr ,initial-entries)
-                                        ,result)))))))
+               ,(if constructor
+                    `(,constructor ,initial-entries)
+                    `(named-let ,walk ((,initial-entries ,initial-entries)
+                                       (,result ,empty-node))
+                       (if (null ,initial-entries)
+                           ,result
+                           (,walk (cddr ,initial-entries)
+                                  (api:update (car ,initial-entries) (cadr ,initial-entries)
+                                              ,result))))))))
               
        (defmethod configuration ((,object ,name))
          (declare (ignore ,object))
@@ -913,5 +934,45 @@
               (go ,restart)
               ,done))))))
 
+(defmacro api:define-comparator (name &body (first-field . more-fields))
+  (let ((object1 (gensym))
+        (object2 (gensym))
+        (order (gensym)))
+    (labels
+        ((expand-field (continuation spec)
+           (destructuring-bind (getter comparator) spec
+             `(let ((,order (,comparator (,getter ,object1) (,getter ,object2))))
+                (if (not (zerop ,order)) ,order ,continuation)))))
+      (let* ((clauses (reverse (cons first-field more-fields)))
+             (rest (cdr clauses))
+             (tail (destructuring-bind (getter comparator) (car clauses)
+                     `(,comparator (,getter ,object1) (,getter ,object2)))))
+        `(defun ,name (,object1 ,object2)
+           ,(reduce #'expand-field rest
+                    :initial-value tail))))))
+  
+(defgeneric api:compare (object1 object2))
 
+(defmacro api:defcompare (class (object1 object2) &body body)
+  `(defmethod api:compare ((,object1 ,class) (,object2 ,class))
+     ,@body))
+
+
+(api:defcompare string (object1 object2)
+  (compare-strings object1 object2))
+
+(api:defcompare real (object1 object2)
+  (compare-reals object1 object2))
+
+(api:defcompare character (object1 object2)
+  (api:compare-characters object1 object2))
+
+
+(api:define api:tree
+  (:comparator api:compare)
+  (:predicate api:treep)
+  (:constructor api:make-tree)
+  (:constructor* api:tree)
+  (:documentation "A weight balanced binary search tree that uses the
+    global COMPARE function as its comparator."))
 

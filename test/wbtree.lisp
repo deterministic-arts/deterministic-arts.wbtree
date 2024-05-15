@@ -140,7 +140,7 @@
 (def-suite deterministic-arts.wbtree.test.iteration :in deterministic-arts.wbtree.test)
 
 (test (empty-tree :suite deterministic-arts.wbtree.test.iteration)
-  (is (null (collect (string-tree)))))
+  (is (null (collect-pairs* (string-tree)))))
 
 (test (iteration :suite deterministic-arts.wbtree.test.iteration)
   (let* ((sorted-keys (generate-strings 129 3))
