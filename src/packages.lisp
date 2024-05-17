@@ -29,7 +29,7 @@
            #:maximum-key #:floor-key #:ceiling-key #:equal #:node-iterator #:node-iterator*
            #:do #:correlate-nodes #:compare-from-lessp #:compare-strings #:compare-reals
            #:compare-characters #:next-node #:reduce #:reduce-nodes #:modify #:define-comparator
-           #:compare #:defcompare #:tree #:treep #:make-tree #:hash))
+           #:compare #:defcompare #:dictionary #:dictionaryp #:make-dictionary #:hash))
 
 (defpackage #:deterministic-arts.wbtree.internals
   (:use #:common-lisp)

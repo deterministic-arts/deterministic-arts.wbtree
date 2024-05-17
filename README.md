@@ -56,7 +56,7 @@ this example.)
    
    Client code must also not derive subtypes from types introduced via `wbtree:define`.
    
- - Type `wbtree:tree` 
+ - Type `wbtree:dictionary` 
  
    This is a concrete subtype of `wbtree:node` that uses the `wbtree:compare` 
    generic function as its comparator. This is the only concrete subtype of `wbtree:node` 
@@ -132,6 +132,18 @@ this example.)
    Iteration order and range/subset selection can be controlled by the remaining
    arguments _iterator-options_. See `wbtree:iterator` for a description of supported
    options and their significance.
+   
+ - Function `wbtree:dictionary` `&rest` _initial-entries_ &rarr; _tree_
+ 
+   Constructs and returns an instance of `wbtree:dictionary`. If _initial-entries_ is empty,
+   the returned object will be empty. Otherwise, it must be a property-list of _key_/_value_
+   pairs, and the resulting search tree instance will contain exactly those pairs as
+   its entries.
+   
+ - Function `wbtree:dictionaryp` _object_ &rarr; _boolean_
+ 
+   Answers true, if _object_ is an instance of class `wbtree:dictionary` and false 
+   otherwise.
    
  - Function `wbtree:difference` _object1_ _object2_ &rarr; _new-object_
 
@@ -216,9 +228,9 @@ this example.)
    no left child and this function returns `nil` instead (it is the only node for which
    this function returns anything else but a `wbtree:node`)
 
- - Function `wbtree:make-tree` `&optional` _initial-entries_ &rarr; _tree_
+ - Function `wbtree:make-dictionary` `&optional` _initial-entries_ &rarr; _tree_
  
-   Constructs and returns an instance of `wbtree:tree`. If _initial-entries_ is empty,
+   Constructs and returns an instance of `wbtree:dictionary`. If _initial-entries_ is empty,
    the returned object will be empty. Otherwise, it must be a property-list of _key_/_value_
    pairs, and the resulting search tree instance will contain exactly those pairs as
    its entries.
@@ -346,13 +358,6 @@ this example.)
  
    Answers the size (i.e., number of key/value pairs it contains) of the search tree whose 
    root is _node_.
-   
- - Function `wbtree:tree` `&rest` _initial-entries_ &rarr; _tree_
- 
-   Constructs and returns an instance of `wbtree:tree`. If _initial-entries_ is empty,
-   the returned object will be empty. Otherwise, it must be a property-list of _key_/_value_
-   pairs, and the resulting search tree instance will contain exactly those pairs as
-   its entries.
    
  - Function `wbtree:treep` _object_ &rarr; _boolean_
  

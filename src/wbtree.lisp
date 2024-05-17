@@ -986,11 +986,11 @@
   (api:compare-characters object1 object2))
 
 
-(api:define api:tree
+(api:define api:dictionary
   (:comparator api:compare)
-  (:predicate api:treep)
-  (:constructor api:make-tree)
-  (:constructor* api:tree)
+  (:predicate api:dictionaryp)
+  (:constructor api:make-dictionary)
+  (:constructor* api:dictionary)
   (:documentation "A weight balanced binary search tree that uses the
     global COMPARE function as its comparator."))
 
