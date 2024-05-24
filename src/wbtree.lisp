@@ -980,7 +980,7 @@
   (compare-strings object1 object2))
 
 (api:defcompare real (object1 object2)
-  (compare-reals object1 object2))
+  (api:compare-reals object1 object2))
 
 (api:defcompare character (object1 object2)
   (api:compare-characters object1 object2))

@@ -568,7 +568,7 @@ to introduce a "wrapper" type
 which I am not particularly fond of.
 
 However, as it is sometime convenient to have such a fallback to rely on,
-this library provides the `wbtree:tree` type and its associated `wbtree:compare`
+this library provides the `wbtree:dictionary` type and its associated `wbtree:compare`
 comparator function.
 
 ## Sycamore
